@@ -1,9 +1,17 @@
  (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
 diff --git a/index.html b/index.html
-index ff035446831c25c500b2a13f733680f8a8aa2244..db28601d4314e50ca9cffc700f0aa4822fcc5eec 100644
+index ff035446831c25c500b2a13f733680f8a8aa2244..c4389e84dfcfadbee9e108c839bbe1a7acb38727 100644
 --- a/index.html
 +++ b/index.html
-@@ -32,46 +32,46 @@
+@@ -24,54 +24,94 @@
+ 
+ 		<!-- GSAP (animation engine) + ScrollTrigger plugin via CDN for precise scroll control -->
+ 		<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+ 		<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+ 
+ 		<!-- Small inline hint to reduce CLS / FOUT: use system font stack until variable fonts load -->
+ 		<style>
+ 			:root { --ui-bg: #0b0b0b; }
  			/* users who prefer reduced motion get a static fallback via CSS variables */
  			@media (prefers-reduced-motion: reduce) {
  				:root { --reduced-motion: 1; }
@@ -21,19 +29,70 @@ index ff035446831c25c500b2a13f733680f8a8aa2244..db28601d4314e50ca9cffc700f0aa482
  
  		<!-- Dynamic component loader: fetches HTML fragments from /components/ and injects them.
  				 This keeps components modular and editable independent of index.html. -->
- 		<script>
- 			(function loadComponent(path, targetId) {
- 				// Simple safe loader: fetch fragment and inject as HTML.
- 				fetch(path).then(r => r.ok ? r.text() : Promise.reject(r.status)).then(html => {
- 					document.getElementById(targetId).innerHTML = html;
- 				}).catch(err => {
- 					console.warn('Could not load component', path, err);
- 					// graceful fallback: minimal placeholder
+-		<script>
+-			(function loadComponent(path, targetId) {
+-				// Simple safe loader: fetch fragment and inject as HTML.
+-				fetch(path).then(r => r.ok ? r.text() : Promise.reject(r.status)).then(html => {
+-					document.getElementById(targetId).innerHTML = html;
+-				}).catch(err => {
+-					console.warn('Could not load component', path, err);
+-					// graceful fallback: minimal placeholder
 -					document.getElementById(targetId).innerHTML = '<section class="hero-fallback">Lennart Hilbring</section>';
-+                                        document.getElementById(targetId).innerHTML = '<section class="hero-fallback">Experimental Type</section>';
- 				});
- 			})('components/hero.html', 'hero-root');
- 		</script>
+-				});
+-			})('components/hero.html', 'hero-root');
+-		</script>
++                <script>
++                        (function loadComponent(path, targetId, name) {
++                                const target = document.getElementById(targetId);
++                                if (!target) {
++                                        console.warn('Mount point missing for component', name);
++                                        return Promise.reject(new Error(`Target ${targetId} not found`));
++                                }
++
++                                const registry = (window.__components = window.__components || {});
++
++                                const createDetail = (overrides) => ({ name, target, ...overrides });
++
++                                const dispatchReady = (detail) => {
++                                        const eventName = `component:${name}-ready`;
++                                        let event;
++                                        if (typeof window.CustomEvent === 'function') {
++                                                event = new CustomEvent(eventName, { detail });
++                                        } else {
++                                                event = document.createEvent('CustomEvent');
++                                                event.initCustomEvent(eventName, false, false, detail);
++                                        }
++                                        document.dispatchEvent(event);
++                                        registry[name].detail = detail;
++                                        return detail;
++                                };
++
++                                const fallback = () => {
++                                        const html = '<section class="hero-fallback">Experimental Type</section>';
++                                        target.innerHTML = html;
++                                        return dispatchReady(createDetail({ error: true, html }));
++                                };
++
++                                const promise = fetch(path)
++                                        .then((response) => {
++                                                if (!response.ok) {
++                                                        throw new Error(`Failed to load ${path}: ${response.status}`);
++                                                }
++                                                return response.text();
++                                        })
++                                        .then((html) => {
++                                                target.innerHTML = html;
++                                                return dispatchReady(createDetail({ html }));
++                                        })
++                                        .catch((err) => {
++                                                console.warn('Could not load component', path, err);
++                                                return fallback();
++                                        });
++
++                                registry[name] = { ready: promise, target, name, detail: null };
++                                return promise;
++                        })('components/hero.html', 'hero-root', 'hero');
++                </script>
  
  		<!-- Core interaction modules (deferred) -->
  		<script defer src="js/canvas-bg.js"></script>
