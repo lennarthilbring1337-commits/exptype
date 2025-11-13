@@ -51,20 +51,31 @@
                                 const target = document.getElementById(targetId);
                                 if (!target) {
                                         console.warn('Mount point missing for component', name);
-                                        return;
+                                        return Promise.reject(new Error(`Target ${targetId} not found`));
                                 }
 
                                 const registry = (window.__components = window.__components || {});
 
-                                const notifyReady = (detail) => {
+                                const createDetail = (overrides) => ({ name, target, ...overrides });
+
+                                const dispatchReady = (detail) => {
                                         const eventName = `component:${name}-ready`;
-                                        document.dispatchEvent(new CustomEvent(eventName, { detail }));
+                                        let event;
+                                        if (typeof window.CustomEvent === 'function') {
+                                                event = new CustomEvent(eventName, { detail });
+                                        } else {
+                                                event = document.createEvent('CustomEvent');
+                                                event.initCustomEvent(eventName, false, false, detail);
+                                        }
+                                        document.dispatchEvent(event);
+                                        registry[name].detail = detail;
+                                        return detail;
                                 };
 
                                 const fallback = () => {
                                         const html = '<section class="hero-fallback">Experimental Type</section>';
                                         target.innerHTML = html;
-                                        notifyReady({ name, target, error: true, html });
+                                        return dispatchReady(createDetail({ error: true, html }));
                                 };
 
                                 const promise = fetch(path)
@@ -76,16 +87,14 @@
                                         })
                                         .then((html) => {
                                                 target.innerHTML = html;
-                                                notifyReady({ name, target, html });
-                                                return html;
+                                                return dispatchReady(createDetail({ html }));
                                         })
                                         .catch((err) => {
                                                 console.warn('Could not load component', path, err);
-                                                fallback();
-                                                return null;
+                                                return fallback();
                                         });
 
-                                registry[name] = { ready: promise, target };
+                                registry[name] = { ready: promise, target, name, detail: null };
                                 return promise;
                         })('components/hero.html', 'hero-root', 'hero');
                 </script>

@@ -145,12 +145,25 @@
     return true;
   }
 
+  let waitingForHero = false;
+
   function attemptInit() {
     if (init()) return;
+    if (waitingForHero) return;
+    waitingForHero = true;
+
+    const tryInit = () => {
+      if (!initialized) init();
+    };
+
+    const registry = window.__components;
+    if (registry && registry.hero && registry.hero.ready) {
+      registry.hero.ready.then(tryInit).catch(tryInit);
+    }
+
     document.addEventListener('component:hero-ready', (event) => {
-      if (initialized) return;
       if (!event || !event.detail || event.detail.name === 'hero') {
-        init();
+        tryInit();
       }
     }, { once: true });
   }
