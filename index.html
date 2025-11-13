@@ -1,0 +1,77 @@
+<!doctype html>
+<!--
+	Experimental/index.html
+	Entry point for the kinetic-typography landing page.
+
+	Responsibilities:
+	- Load global styles in /css/layout.css and /css/typography.css
+	- Dynamically inject component fragments from /components/
+	- Load JS interaction modules in /js/ (mouse-effects, scroll-effects)
+	- Provide accessibility fallbacks (prefers-reduced-motion and noscript)
+
+	This file intentionally keeps structural markup minimal — typography and
+	motion live in the component files and JS modules to keep concerns separated.
+-->
+<html lang="de">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width,initial-scale=1" />
+		<title>Brutalist Kinetic Typography</title>
+
+		<!-- Core styles: layout + typography (variable-font rules live in typography.css) -->
+		<link rel="stylesheet" href="css/layout.css">
+		<link rel="stylesheet" href="css/typography.css">
+
+		<!-- GSAP (animation engine) + ScrollTrigger plugin via CDN for precise scroll control -->
+		<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+		<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+		<!-- Small inline hint to reduce CLS / FOUT: use system font stack until variable fonts load -->
+		<style>
+			:root { --ui-bg: #0b0b0b; }
+			/* users who prefer reduced motion get a static fallback via CSS variables */
+			@media (prefers-reduced-motion: reduce) {
+				:root { --reduced-motion: 1; }
+			}
+		</style>
+	</head>
+	<body>
+
+		<!-- App root. Components are loaded in JS (keeps this file light). -->
+		<div id="app">
+			<!-- Placeholder where /components/hero.html will be injected -->
+			<div id="hero-root" class="component-root"></div>
+			<!-- Additional sections may be injected or appended by scripts for non-linear layout -->
+		</div>
+
+		<!-- Dynamic component loader: fetches HTML fragments from /components/ and injects them.
+				 This keeps components modular and editable independent of index.html. -->
+		<script>
+			(function loadComponent(path, targetId) {
+				// Simple safe loader: fetch fragment and inject as HTML.
+				fetch(path).then(r => r.ok ? r.text() : Promise.reject(r.status)).then(html => {
+					document.getElementById(targetId).innerHTML = html;
+				}).catch(err => {
+					console.warn('Could not load component', path, err);
+					// graceful fallback: minimal placeholder
+					document.getElementById(targetId).innerHTML = '<section class="hero-fallback">Lennart Hilbring</section>';
+				});
+			})('components/hero.html', 'hero-root');
+		</script>
+
+		<!-- Core interaction modules (deferred) -->
+		<script defer src="js/canvas-bg.js"></script>
+		<script defer src="js/mouse-effects.js"></script>
+		<script defer src="js/scroll-effects.js"></script>
+
+		<noscript>
+			<style>
+				/* Static fallback styles for users with JS disabled */
+				body { background: #fafafa; color: #111; }
+				.hero-fallback { font-size: 48px; padding: 6rem 1rem; font-weight:700; }
+			</style>
+			<div style="padding:3rem">Javascript ist erforderlich für diese experimentelle Seite. Es wird ein statischer Fallback angezeigt.</div>
+		</noscript>
+	</body>
+</html>
+

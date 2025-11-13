@@ -1,0 +1,80 @@
+<!--
+  components/hero.html
+
+  Hero component fragment for the kinetic typography landing page.
+
+  Responsibilities:
+  - Provide the oversized headline split into per-character spans for granular
+    mouse & scroll-driven effects (tilt, tracking, blur, rotation).
+  - Include background layers (canvas for noise/displacement + gradient overlays)
+    that the JS modules can animate independently.
+  - Expose hooks and data-attributes expected by `js/mouse-effects.js` and
+    `js/scroll-effects.js` (ids/classes: #hero, .hero-bg, .type-wrap, .char).
+
+  Notes:
+  - This is an HTML fragment (not a full page). It's injected into
+    `/Experimental/index.html` by the loader there.
+  - Keep structure minimal here; visuals and motion live in CSS/JS.
+-->
+
+<section id="hero" class="hero" aria-labelledby="hero-title">
+  <!-- Background canvas for animated noise / displacement maps.
+       JS can grab #hero-canvas and render WebGL/SVG noise or animated particles. -->
+  <canvas id="hero-canvas" class="hero-bg" width="1600" height="900" aria-hidden="true"></canvas>
+
+  <!-- Brutalist overlays: glass panel + gradient burn that layer above canvas -->
+  <div class="hero-overlay">
+    <div class="burn-layer"></div>
+    <div class="glass-layer" aria-hidden="true"></div>
+  </div>
+
+  <!-- Primary typographic module. Each visible letter is wrapped in a span.char
+       so JS can apply per-letter transforms (rotation, skew, tracking, blur).
+       Use data- attributes to store logical positions for parallax/scroll mapping. -->
+  <div class="type-wrap" role="img" aria-label="Brutalist portfolio by Lennart Hilbring">
+    <h1 id="hero-title" class="hero-headline">
+      <!-- Example headline text. Split into words and characters for interactions. -->
+      <span class="word" data-word-index="0">
+        <!-- We'll split characters manually so the fragment is explicit; JS can regenerate if desired. -->
+        <span class="char" data-char-index="0">L</span>
+        <span class="char" data-char-index="1">E</span>
+        <span class="char" data-char-index="2">N</span>
+        <span class="char" data-char-index="3">N</span>
+        <span class="char" data-char-index="4">A</span>
+        <span class="char" data-char-index="5">R</span>
+        <span class="char" data-char-index="6">T</span>
+      </span>
+
+      <span class="spacer" aria-hidden="true">&nbsp;</span>
+
+      <span class="word" data-word-index="1">
+        <span class="char" data-char-index="0">H</span>
+        <span class="char" data-char-index="1">I</span>
+        <span class="char" data-char-index="2">L</span>
+        <span class="char" data-char-index="3">B</span>
+        <span class="char" data-char-index="4">R</span>
+        <span class="char" data-char-index="5">I</span>
+        <span class="char" data-char-index="6">N</span>
+        <span class="char" data-char-index="7">G</span>
+      </span>
+
+      <span class="spacer" aria-hidden="true">&nbsp;</span>
+
+      <span class="word" data-word-index="2">
+        <span class="char" data-char-index="0">B</span>
+        <span class="char" data-char-index="1">R</span>
+        <span class="char" data-char-index="2">U</span>
+        <span class="char" data-char-index="3">T</span>
+        <span class="char" data-char-index="4">A</span>
+        <span class="char" data-char-index="5">L</span>
+      </span>
+    </h1>
+
+    <!-- A small caption for context, intentionally raw and off-grid. -->
+    <div class="hero-subhead" aria-hidden="true">kinetic typography / structural brutality / experimental</div>
+  </div>
+
+  <!-- A sparse, hidden progress indicator used by ScrollTrigger for mapping progress.
+       Kept visually hidden but available for assistive tech if needed. -->
+  <div class="sr-only" id="hero-progress" aria-hidden="true"></div>
+</section>

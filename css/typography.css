@@ -1,0 +1,147 @@
+/*
+  css/typography.css
+
+  Purpose:
+  - Declare variable font @font-face placeholders and fallbacks.
+  - Provide the primary typographic rules for the hero and per-character
+    interaction hooks (.char, .type-wrap, .hero-headline).
+  - Expose CSS custom properties to be driven by JS (e.g. --vf-wght, --vf-wdth,
+    --vf-slnt, --vf-opsz) which JS/GSAP can animate via inline styles or
+    by toggling classes.
+
+  How it connects:
+  - `index.html` loads this file globally.
+  - `components/hero.html` provides `.hero-headline` and `.char` elements that
+    this file styles and prepares for GPU-accelerated transforms used by
+    `js/mouse-effects.js` and `js/scroll-effects.js`.
+
+  Notes:
+  - Place your variable font files into `/assets/fonts/` (examples below).
+  - The file includes a `prefers-reduced-motion` media query to provide a
+    static, accessible fallback.
+*/
+
+:root{
+  /* color palette */
+  --bg:#0b0b0b;
+  --fg:#fafafa;
+  --neon:#ff0040; /* neon pink */
+  --muted-beige:#e9dccf;
+  --industrial-gray:#9b9b9b;
+
+  /* variable font axes (default values) - JS will override with inline styles */
+  --vf-wght: 700; /* weight axis */
+  --vf-wdth: 100; /* width axis (percent-like) */
+  --vf-slnt: 0;   /* slant / italic axis */
+  --vf-opsz: 72;  /* optical size */
+
+  /* performance helpers */
+  --headline-transition: 280ms cubic-bezier(.2,.9,.2,1);
+}
+
+/* -------- fonts (placeholders) --------
+   Copy your variable-font file(s) into /assets/fonts/ and update the src.
+   Example variable fonts you can use: Recursive Variable (open-source),
+   or Obviously Variable. Below are example @font-face entries for a
+   hypothetical `Recursive-VF.woff2`.
+*/
+@font-face {
+  font-family: 'RecursiveVar';
+  src: url('../assets/fonts/Recursive-VF.woff2') format('woff2');
+  font-weight: 100 1000;
+  font-stretch: 75% 125%;
+  font-style: oblique 0deg 20deg;
+  font-display: swap;
+}
+
+/* Fallbacks: strongly prefer a variable font but allow system stack */
+:root{ --ui-font: 'RecursiveVar', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
+
+/* -------- base typographic reset for this project -------- */
+html,body{
+  height:100%;
+  background:var(--bg);
+  color:var(--fg);
+  font-family:var(--ui-font);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+/* visually-hidden utility for accessibility */
+.sr-only{ position:absolute !important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+/* -------- hero type: oversized and raw -------- */
+.hero { position:relative; overflow:visible; min-height:70vh; display:flex; align-items:center; }
+.type-wrap{ position:relative; z-index:3; padding:6vh 6vw; mix-blend-mode:normal; }
+
+.hero-headline{
+  margin:0;
+  line-height:0.86; /* visually tighter for big display type */
+  color:var(--fg);
+  font-variation-settings: 'wght' var(--vf-wght), 'wdth' var(--vf-wdth), 'slnt' var(--vf-slnt), 'opsz' var(--vf-opsz);
+  font-weight:var(--vf-wght);
+  font-size:clamp(4rem, 12vw, 12rem); /* responsive oversized type */
+  letter-spacing: -0.02em;
+  text-transform:uppercase;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap:0.35ch;
+  will-change: transform;
+}
+
+/* each char is an interaction target. GPU-accelerate transforms and filters. */
+.char{
+  display:inline-block;
+  transform-origin:center;
+  will-change: transform, filter, opacity;
+  backface-visibility:hidden;
+  -webkit-font-smoothing:antialiased;
+  transition: transform var(--headline-transition), filter 200ms linear, opacity 200ms linear;
+  /* expose CSS variables that JS can change per-char for subtle variance */
+  --char-tilt: 0deg;
+  --char-rotate: 0deg;
+  --char-scale: 1;
+  --char-blur: 0px;
+}
+
+.char[data-animated="true"]{
+  transform: rotate(var(--char-rotate)) rotateX(var(--char-tilt)) scale(var(--char-scale));
+  filter: blur(var(--char-blur));
+}
+
+/* subtle brutalist accent for a few letters (JS can toggle `.accent`) */
+.char.accent{ color:var(--neon); mix-blend-mode:screen; }
+
+/* subtitle */
+.hero-subhead{ margin-top:1.25rem; color:var(--industrial-gray); font-size:clamp(0.7rem, 1.5vw, 1.1rem); letter-spacing:0.2em; text-transform:lowercase; }
+
+/* overlay layers styled here so CSS handles blend modes and glass effect */
+.hero-overlay{ position:absolute; inset:0; pointer-events:none; z-index:2; }
+.glass-layer{ position:absolute; inset:6% 10%; border-radius:6px; background:rgba(255,255,255,0.03); backdrop-filter:blur(6px) saturate(120%); mix-blend-mode:overlay; }
+.burn-layer{ position:absolute; inset:0; background:linear-gradient(120deg, transparent 10%, rgba(255,0,64,0.06) 40%, rgba(0,0,0,0.2) 100%); mix-blend-mode:color-burn; opacity:0.8; }
+
+/* canvas sits behind the type */
+.hero-bg{ position:absolute; left:0; top:0; width:100%; height:100%; z-index:1; object-fit:cover; }
+
+/* responsive adjustments */
+@media (max-width:800px){
+  .hero { min-height:60vh; }
+  .hero-headline{ font-size:clamp(2.4rem, 12vw, 6.2rem); line-height:0.95; }
+  .type-wrap{ padding:4vh 5vw; }
+}
+
+/* -------- motion accessibility: reduced motion -------- */
+@media (prefers-reduced-motion: reduce){
+  .char, .hero-headline{ transition:none !important; animation:none !important; }
+  .hero-bg{ animation:none !important; }
+}
+
+/* helper when JS is disabled — slightly more legible static layout */
+html.no-js .hero-headline{ transform:none; }
+
+/* small helper for JS: when heavy-motion is active we can add a class `heavy-motion`
+   that enables extra per-letter transitions handled by GSAP */
+.heavy-motion .char{ transition: transform 200ms cubic-bezier(.2,.9,.2,1); }
+
+/* End of typography.css */

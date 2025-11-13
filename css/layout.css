@@ -1,0 +1,95 @@
+/*
+  css/layout.css
+
+  Purpose:
+  - Provide the overall brutalist page layout: asymmetric grids, floating blocks,
+    oversized editorial spacing, and utility classes for positioning.
+  - Place and size the background canvas used by `/components/hero.html`.
+  - Hide navigation and keep focus on the typographic experience.
+  - Supply mobile/tablet adaptations and performance-safe fallbacks.
+
+  Connections:
+  - Loaded by `index.html`.
+  - Works with `css/typography.css` which handles fonts and character styles.
+  - JS modules (`js/scroll-effects.js`, `js/mouse-effects.js`) rely on layout classes
+    and structural anchors (e.g. `.hero`, `.type-wrap`, `#hero-canvas`) to map
+    scroll and mouse interactions.
+
+  Design notes:
+  - Purposefully raw: large gutter, broken grid, off-axis elements.
+  - Visual tension is created by contrasting strict geometry (grid) and free
+    floating typographic blocks.
+*/
+
+/* Reset some layout defaults used in this experimental project */
+*{ box-sizing: border-box; }
+html,body{ height:100%; margin:0; padding:0; }
+body{ background: var(--bg); color:var(--fg); overflow-x:hidden; font-family:var(--ui-font); }
+
+/* Hide unobtrusive navigation; keep it accessible to tab/keyboard users */
+.site-nav{ position:fixed; left:1rem; top:1rem; z-index:50; opacity:0.06; pointer-events:none; }
+.site-nav:focus-within, .site-nav:hover{ opacity:1; pointer-events:auto; }
+
+/* Page container that supports non-linear stacking of sections */
+.page{ display:block; width:100%; }
+
+/* Large brutalist grid: a loose 12-column feel with intentionally imbalanced gutters */
+.grid{ display:grid; grid-template-columns: repeat(12, 1fr); gap: clamp(12px, 2vw, 48px); align-items:start; }
+
+/* Floating panel utility: pick a span across the grid to create off-axis blocks */
+.float-left{ grid-column: 1 / span 7; transform: translateX(-6%); }
+.float-right{ grid-column: 6 / span 7; transform: translateX(6%); }
+.full-bleed{ grid-column: 1 / -1; width:100vw; margin-left: calc(50% - 50vw); }
+
+/* Brutalist edges and borders */
+.panel{ border: 4px solid rgba(255,255,255,0.04); padding: clamp(12px, 2vh, 48px); background:transparent; }
+.panel.raw{ border-style:solid dashed; }
+
+/* Hero-specific layout rules */
+.hero{ min-height: 80vh; display:block; position:relative; }
+#hero-canvas{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1; }
+.type-wrap{ position:relative; z-index:3; padding-left: clamp(6vw, 10vw, 12vw); padding-top: clamp(8vh, 14vh, 20vh); }
+
+/* Create a sense of scale with a massive left gutter for editorial breathing room */
+.editorial-column{ width:40vw; position:fixed; left:6vw; top:18vh; z-index:4; pointer-events:none; }
+
+/* Large accent block for experimental metadata / microcopy — intentionally off-grid */
+.accent-block{ position: absolute; right:8vw; top:20vh; width:28vw; padding:2rem; background:rgba(255,255,255,0.02); border-left:6px solid var(--neon); transform:rotate(-2deg); z-index:4; }
+
+/* Type scale helpers used by JS when fragmenting or morphing type */
+.type-large{ font-size: clamp(6rem, 12vw, 14rem); }
+.type-medium{ font-size: clamp(2rem, 6vw, 4.5rem); }
+
+/* Visual noise / grain overlay to add industrial texture */
+.grain{ position:fixed; inset:0; pointer-events:none; z-index:100; mix-blend-mode:overlay; opacity:0.06; }
+
+/* Utility for layering and z-index control */
+.layer-top{ z-index:999; }
+.layer-mid{ z-index:5; }
+.layer-back{ z-index:1; }
+
+/* Small tactile scrollbar styling (macOS-friendly subtlety) */
+::-webkit-scrollbar{ width:12px; height:12px; }
+::-webkit-scrollbar-thumb{ background:linear-gradient(180deg, rgba(255,0,64,0.25), rgba(0,0,0,0.25)); border-radius:6px; }
+
+/* Reduced motion / performance mode: simplify transforms and reduce paint cost */
+@media (prefers-reduced-motion: reduce){
+  .hero, .type-wrap, .panel, .accent-block{ transition:none !important; transform:none !important; }
+  #hero-canvas{ display:none; }
+}
+
+/* Mobile / tablet layout adaptations */
+@media (max-width:900px){
+  .grid{ grid-template-columns: repeat(6, 1fr); }
+  .float-left, .float-right{ grid-column: 1 / -1; transform:none; }
+  .editorial-column{ display:none; }
+  .accent-block{ position:static; transform:none; width:100%; margin-top:1.5rem; }
+  .type-wrap{ padding-left:4vw; padding-top:6vh; }
+}
+
+/* Ensure body is the scrolling container for ScrollTrigger mappings */
+body{ -webkit-overflow-scrolling:touch; }
+
+/* intentionally no global nav or footer — minimal chrome */
+
+/* end of layout.css */
