@@ -1,3 +1,4 @@
+ (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
 diff --git a/components/hero.html b/components/hero.html
 index 44e7c416372f0a84b811e25a4150f076b15e563c..8c905d63e6a93eddce8901ee3fc19c2b6d40598f 100644
 --- a/components/hero.html
@@ -91,3 +92,6 @@ index 44e7c416372f0a84b811e25a4150f076b15e563c..8c905d63e6a93eddce8901ee3fc19c2b
         Kept visually hidden but available for assistive tech if needed. -->
    <div class="sr-only" id="hero-progress" aria-hidden="true"></div>
  </section>
+ 
+EOF
+)
