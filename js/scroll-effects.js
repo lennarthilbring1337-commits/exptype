@@ -25,14 +25,22 @@
 
   gsap.registerPlugin(ScrollTrigger);
 
-  document.addEventListener('DOMContentLoaded', () => {
+  let initialized = false;
+
+  function init() {
+    if (initialized) return true;
+
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const hero = document.getElementById('hero');
-    if (!hero) return;
+    if (!hero) return false;
 
     const canvas = document.getElementById('hero-canvas');
     const headline = hero.querySelector('.hero-headline');
     const chars = Array.from(hero.querySelectorAll('.hero-headline .char'));
+
+    if (!headline || !chars.length) return false;
+
+    initialized = true;
 
     // Safety: if reduced motion is requested, do a minimal static style and exit.
     if (reduced) {
@@ -40,18 +48,21 @@
       // subtle static scaling for presence
       gsap.set(headline, { scale: 1.0 });
       if (canvas) gsap.set(canvas, { opacity: 0.6 });
-      return;
+      return true;
     }
 
     // Setup transform perspective for 3D feel (CSS fallback in typography.css)
     gsap.set(headline, { transformOrigin: '50% 50%', force3D: true });
 
     // Parallax for background canvas (slower than scroll)
-    const canvasParallax = gsap.to(canvas || {}, {
-      yPercent: 12,
-      ease: 'none',
-      paused: true
-    });
+    let canvasParallax = null;
+    if (canvas) {
+      canvasParallax = gsap.to(canvas, {
+        yPercent: 12,
+        ease: 'none',
+        paused: true
+      });
+    }
 
     // Main scroll timeline
     const endDistance = Math.max(window.innerHeight * 1.6, 1400);
@@ -77,7 +88,9 @@
     }, 0);
 
     // 2) Slowly move the canvas behind the type for depth
-    tl.to(canvasParallax, { progress: 1, duration: 1 }, 0);
+    if (canvasParallax) {
+      tl.to(canvasParallax, { progress: 1, duration: 1 }, 0);
+    }
 
     // 3) Fragment: stagger characters outward and add minor z translation to imply depth
     // We split this into two phases: subtle separation, then brief jitter/morph.
@@ -135,6 +148,24 @@
     });
 
     // Performance tip: if too many chars cause frame drops, reduce stagger or animate fewer properties.
-  });
+
+    return true;
+  }
+
+  function attemptInit() {
+    if (init()) return;
+    document.addEventListener('component:hero-ready', (event) => {
+      if (initialized) return;
+      if (!event || !event.detail || event.detail.name === 'hero') {
+        init();
+      }
+    }, { once: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attemptInit);
+  } else {
+    attemptInit();
+  }
 
 })();

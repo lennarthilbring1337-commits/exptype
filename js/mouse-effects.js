@@ -22,126 +22,152 @@
   // mark JS-enabled for CSS fallbacks
   try { document.documentElement.classList.add('js'); } catch(e){}
 
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const hero = document.getElementById('hero');
-  if (!hero) return;
+  let initialized = false;
 
-  const chars = Array.from(document.querySelectorAll('.hero-headline .char'));
-  if (!chars.length) return;
+  function init() {
+    if (initialized) return true;
 
-  // if user prefers reduced motion, set static state and exit early
-  if (reduced) {
-    chars.forEach(c => {
-      c.style.setProperty('--char-tilt', '0deg');
-      c.style.setProperty('--char-rotate', '0deg');
-      c.style.setProperty('--char-scale', '1');
-      c.style.setProperty('--char-blur', '0px');
-      c.dataset.animated = 'false';
-    });
-    return;
-  }
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const hero = document.getElementById('hero');
+    if (!hero) return false;
 
-  // Precompute centers of characters to avoid repeated layout reads on every move.
-  // We do a cheap cache and refresh it on resize.
-  let charCenters = [];
-  function computeCenters() {
-    charCenters = chars.map((el) => {
-      const r = el.getBoundingClientRect();
-      return { x: r.left + r.width / 2, y: r.top + r.height / 2, el };
-    });
-  }
-  computeCenters();
-  window.addEventListener('resize', () => { computeCenters(); });
+    const chars = Array.from(document.querySelectorAll('.hero-headline .char'));
+    if (!chars.length) return false;
 
-  // pointer state
-  const pointer = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-  let raf = null;
+    initialized = true;
 
-  function onPointerMove(e) {
-    // normalize pointer coordinates
-    pointer.x = e.clientX;
-    pointer.y = e.clientY;
-    if (!raf) raf = requestAnimationFrame(applyEffects);
-  }
-
-  // Attach pointermove listener to hero to scope interactions
-  hero.addEventListener('pointermove', onPointerMove, { passive: true });
-  hero.addEventListener('pointerenter', onPointerMove, { passive: true });
-  hero.addEventListener('pointerleave', (e) => {
-    // ease back to neutral when leaving
-    pointer.x = window.innerWidth / 2;
-    pointer.y = window.innerHeight / 2;
-    if (!raf) raf = requestAnimationFrame(applyEffects);
-  }, { passive: true });
-
-  function applyEffects() {
-    raf = null;
-
-    // hero center for global scaling factor
-    const heroRect = hero.getBoundingClientRect();
-    const heroCenterX = heroRect.left + heroRect.width / 2;
-    const heroCenterY = heroRect.top + heroRect.height / 2;
-
-    // pointer vector from hero center, normalized roughly -1..1
-    const vx = (pointer.x - heroCenterX) / (heroRect.width / 2);
-    const vy = (pointer.y - heroCenterY) / (heroRect.height / 2);
-
-    // base intensity clamps
-    const baseIntensity = Math.min(1, Math.hypot(vx, vy));
-
-    // iterate chars and set CSS vars
-    charCenters.forEach((c, i) => {
-      const dx = (pointer.x - c.x);
-      const dy = (pointer.y - c.y);
-      const dist = Math.hypot(dx, dy);
-
-      // relative influence: closer letters move more
-      const influence = Math.max(0, 1 - (dist / (Math.max(window.innerWidth, window.innerHeight) * 0.6)));
-
-      // per-char mini-randomness (stable per index) to avoid mechanical uniformity
-      const jitter = ((i % 7) - 3) * 0.06; // small angle offset
-
-      // compute transforms
-      const tilt = (dx / window.innerWidth) * 25 * influence * baseIntensity + jitter; // rotateX/rotateY-ish feel
-      const rotate = (dy / window.innerHeight) * 12 * influence * baseIntensity; // small 2D rotate
-      const scale = 1 + 0.06 * influence * baseIntensity; // tiny scaling
-      const blur = Math.max(0, 2.5 * (1 - influence) * (1 - baseIntensity));
-
-      // write CSS variables (GPU friendly)
-      const el = c.el;
-      el.style.setProperty('--char-tilt', `${tilt.toFixed(2)}deg`);
-      el.style.setProperty('--char-rotate', `${rotate.toFixed(2)}deg`);
-      el.style.setProperty('--char-scale', `${scale.toFixed(3)}`);
-      el.style.setProperty('--char-blur', `${blur.toFixed(2)}px`);
-      el.dataset.animated = 'true';
-    });
-  }
-
-  // small idle subtle pulsing for life (low-frequency) using requestAnimationFrame loop
-  let lastPulse = performance.now();
-  function pulseLoop(now) {
-    const dt = now - lastPulse;
-    if (dt > 2200) {
-      // apply a micro-pulse across a subset to keep motion cinematic
-      chars.forEach((ch, idx) => {
-        const phase = (idx % 5) / 5;
-        const p = 1 + 0.01 * Math.sin((now / 800) + phase * Math.PI * 2);
-        ch.style.setProperty('--char-scale', p.toFixed(3));
+    // if user prefers reduced motion, set static state and exit early
+    if (reduced) {
+      chars.forEach(c => {
+        c.style.setProperty('--char-tilt', '0deg');
+        c.style.setProperty('--char-rotate', '0deg');
+        c.style.setProperty('--char-scale', '1');
+        c.style.setProperty('--char-blur', '0px');
+        c.dataset.animated = 'false';
       });
-      lastPulse = now;
+      return true;
+    }
+
+    // Precompute centers of characters to avoid repeated layout reads on every move.
+    // We do a cheap cache and refresh it on resize.
+    let charCenters = [];
+    function computeCenters() {
+      charCenters = chars.map((el) => {
+        const r = el.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2, el };
+      });
+    }
+    computeCenters();
+    window.addEventListener('resize', () => { computeCenters(); });
+
+    // pointer state
+    const pointer = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    let raf = null;
+
+    function applyEffects() {
+      raf = null;
+
+      // hero center for global scaling factor
+      const heroRect = hero.getBoundingClientRect();
+      const heroCenterX = heroRect.left + heroRect.width / 2;
+      const heroCenterY = heroRect.top + heroRect.height / 2;
+
+      // pointer vector from hero center, normalized roughly -1..1
+      const vx = (pointer.x - heroCenterX) / (heroRect.width / 2);
+      const vy = (pointer.y - heroCenterY) / (heroRect.height / 2);
+
+      // base intensity clamps
+      const baseIntensity = Math.min(1, Math.hypot(vx, vy));
+
+      // iterate chars and set CSS vars
+      charCenters.forEach((c, i) => {
+        const dx = (pointer.x - c.x);
+        const dy = (pointer.y - c.y);
+        const dist = Math.hypot(dx, dy);
+
+        // relative influence: closer letters move more
+        const influence = Math.max(0, 1 - (dist / (Math.max(window.innerWidth, window.innerHeight) * 0.6)));
+
+        // per-char mini-randomness (stable per index) to avoid mechanical uniformity
+        const jitter = ((i % 7) - 3) * 0.06; // small angle offset
+
+        // compute transforms
+        const tilt = (dx / window.innerWidth) * 25 * influence * baseIntensity + jitter; // rotateX/rotateY-ish feel
+        const rotate = (dy / window.innerHeight) * 12 * influence * baseIntensity; // small 2D rotate
+        const scale = 1 + 0.06 * influence * baseIntensity; // tiny scaling
+        const blur = Math.max(0, 2.5 * (1 - influence) * (1 - baseIntensity));
+
+        // write CSS variables (GPU friendly)
+        const el = c.el;
+        el.style.setProperty('--char-tilt', `${tilt.toFixed(2)}deg`);
+        el.style.setProperty('--char-rotate', `${rotate.toFixed(2)}deg`);
+        el.style.setProperty('--char-scale', `${scale.toFixed(3)}`);
+        el.style.setProperty('--char-blur', `${blur.toFixed(2)}px`);
+        el.dataset.animated = 'true';
+      });
+    }
+
+    function onPointerMove(e) {
+      // normalize pointer coordinates
+      pointer.x = e.clientX;
+      pointer.y = e.clientY;
+      if (!raf) raf = requestAnimationFrame(applyEffects);
+    }
+
+    // Attach pointermove listener to hero to scope interactions
+    hero.addEventListener('pointermove', onPointerMove, { passive: true });
+    hero.addEventListener('pointerenter', onPointerMove, { passive: true });
+    hero.addEventListener('pointerleave', () => {
+      // ease back to neutral when leaving
+      pointer.x = window.innerWidth / 2;
+      pointer.y = window.innerHeight / 2;
+      if (!raf) raf = requestAnimationFrame(applyEffects);
+    }, { passive: true });
+
+    // small idle subtle pulsing for life (low-frequency) using requestAnimationFrame loop
+    let lastPulse = performance.now();
+    function pulseLoop(now) {
+      const dt = now - lastPulse;
+      if (dt > 2200) {
+        // apply a micro-pulse across a subset to keep motion cinematic
+        chars.forEach((ch, idx) => {
+          const phase = (idx % 5) / 5;
+          const p = 1 + 0.01 * Math.sin((now / 800) + phase * Math.PI * 2);
+          ch.style.setProperty('--char-scale', p.toFixed(3));
+        });
+        lastPulse = now;
+      }
+      requestAnimationFrame(pulseLoop);
     }
     requestAnimationFrame(pulseLoop);
-  }
-  requestAnimationFrame(pulseLoop);
 
-  // optional: gentle cleanup when page is hidden to avoid wasted cycles
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      hero.removeEventListener('pointermove', onPointerMove);
-    } else {
-      hero.addEventListener('pointermove', onPointerMove, { passive: true });
-      computeCenters();
-    }
-  });
+    // optional: gentle cleanup when page is hidden to avoid wasted cycles
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        hero.removeEventListener('pointermove', onPointerMove);
+      } else {
+        hero.addEventListener('pointermove', onPointerMove, { passive: true });
+        computeCenters();
+      }
+    });
+
+    return true;
+  }
+
+  function attemptInit() {
+    if (init()) return;
+    document.addEventListener('component:hero-ready', (event) => {
+      if (initialized) return;
+      if (!event || !event.detail || event.detail.name === 'hero') {
+        init();
+      }
+    }, { once: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attemptInit);
+  } else {
+    attemptInit();
+  }
 
 })();

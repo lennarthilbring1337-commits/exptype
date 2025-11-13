@@ -46,18 +46,49 @@
 
 		<!-- Dynamic component loader: fetches HTML fragments from /components/ and injects them.
 				 This keeps components modular and editable independent of index.html. -->
-		<script>
-			(function loadComponent(path, targetId) {
-				// Simple safe loader: fetch fragment and inject as HTML.
-				fetch(path).then(r => r.ok ? r.text() : Promise.reject(r.status)).then(html => {
-					document.getElementById(targetId).innerHTML = html;
-				}).catch(err => {
-					console.warn('Could not load component', path, err);
-					// graceful fallback: minimal placeholder
-                                        document.getElementById(targetId).innerHTML = '<section class="hero-fallback">Experimental Type</section>';
-				});
-			})('components/hero.html', 'hero-root');
-		</script>
+                <script>
+                        (function loadComponent(path, targetId, name) {
+                                const target = document.getElementById(targetId);
+                                if (!target) {
+                                        console.warn('Mount point missing for component', name);
+                                        return;
+                                }
+
+                                const registry = (window.__components = window.__components || {});
+
+                                const notifyReady = (detail) => {
+                                        const eventName = `component:${name}-ready`;
+                                        document.dispatchEvent(new CustomEvent(eventName, { detail }));
+                                };
+
+                                const fallback = () => {
+                                        const html = '<section class="hero-fallback">Experimental Type</section>';
+                                        target.innerHTML = html;
+                                        notifyReady({ name, target, error: true, html });
+                                };
+
+                                const promise = fetch(path)
+                                        .then((response) => {
+                                                if (!response.ok) {
+                                                        throw new Error(`Failed to load ${path}: ${response.status}`);
+                                                }
+                                                return response.text();
+                                        })
+                                        .then((html) => {
+                                                target.innerHTML = html;
+                                                notifyReady({ name, target, html });
+                                                return html;
+                                        })
+                                        .catch((err) => {
+                                                console.warn('Could not load component', path, err);
+                                                fallback();
+                                                return null;
+                                        });
+
+                                registry[name] = { ready: promise, target };
+                                return promise;
+                        })('components/hero.html', 'hero-root', 'hero');
+                </script>
 
 		<!-- Core interaction modules (deferred) -->
 		<script defer src="js/canvas-bg.js"></script>
