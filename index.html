@@ -54,7 +54,7 @@
 				}).catch(err => {
 					console.warn('Could not load component', path, err);
 					// graceful fallback: minimal placeholder
-					document.getElementById(targetId).innerHTML = '<section class="hero-fallback">Lennart Hilbring</section>';
+                                        document.getElementById(targetId).innerHTML = '<section class="hero-fallback">Experimental Type</section>';
 				});
 			})('components/hero.html', 'hero-root');
 		</script>
